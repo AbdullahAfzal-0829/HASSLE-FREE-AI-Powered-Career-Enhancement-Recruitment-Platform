@@ -1,0 +1,14 @@
+flask
+werkzeug
+transformers
+torch
+datasets
+accelerate
+pandas
+spacy
+nltk
+python-docx
+PyPDF2
+scikit-learn
+numpy
+flask-cors
