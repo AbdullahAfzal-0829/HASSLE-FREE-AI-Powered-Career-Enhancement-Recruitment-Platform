@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:linkedin_login/linkedin_login.dart';
 import 'signup_screen.dart';
 import 'dashboard_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../services/auth_service.dart';
+import '../widgets/google_sign_in/google_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,36 +18,78 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  final AuthService _authService = AuthService();
 
   Future<void> _signInWithEmail() async {
-    setState(() => _isLoading = true);
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
-      );
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    
+    if (email.isEmpty || password.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please enter email and password')),
+        );
+      }
+      return;
     }
-    setState(() => _isLoading = false);
-  }
 
-  Future<void> _handleGoogleSignIn() async {
     setState(() => _isLoading = true);
     try {
-      await GoogleSignIn.instance.authenticate();
-      // Successful sign-in
+      await _authService.signInWithEmailPassword(email, password);
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sign In successful!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
         );
       }
-    } catch (error) {
-      debugPrint('Google Sign-In Error: $error');
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign in with Google: $error')),
+          SnackBar(
+            content: Text('Sign In failed: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      setState(() => _isLoading = true);
+      final GoogleSignInAccount? googleUser = await _authService.signInWithGoogle();
+      
+      if (googleUser != null) {
+        debugPrint('Google Login Success: ${googleUser.email}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Welcome, ${googleUser.displayName}!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
+          );
+        }
+      }
+    } catch (error) {
+      debugPrint('Google Sign In Error: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Google Sign In failed. Please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -113,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B26F2).withOpacity(0.3),
+                      color: const Color(0xFF3B26F2).withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -149,7 +193,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 40,
                       offset: const Offset(0, 20),
                     ),
@@ -198,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF3B26F2).withOpacity(0.3),
+                              color: const Color(0xFF3B26F2).withValues(alpha: 0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -244,9 +288,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildSocialButton(
-                            icon: FontAwesomeIcons.google,
-                            label: 'Google',
+                          child: buildGoogleSignInButton(
                             onPressed: _handleGoogleSignIn,
                           ),
                         ),

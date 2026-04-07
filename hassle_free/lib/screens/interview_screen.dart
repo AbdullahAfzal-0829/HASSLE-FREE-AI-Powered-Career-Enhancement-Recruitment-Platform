@@ -81,7 +81,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
         await _initializeControllerFuture;
       }
     } catch (e) {
-      print("Error initializing camera: $e");
+      debugPrint("Error initializing camera: $e");
     }
 
     setState(() {
@@ -134,7 +134,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
         });
       }
     } catch (e) {
-      print("Error calling backend: $e");
+      debugPrint("Error calling backend: $e");
     } finally {
       setState(() {
         _isAnalyzing = false;
@@ -274,7 +274,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                           ),
                         ],
@@ -318,7 +318,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                             children: [
                               CircleAvatar(
                                 backgroundColor: _isCameraMuted
-                                    ? const Color(0xFFEF4444).withOpacity(0.1)
+                                    ? const Color(0xFFEF4444).withValues(alpha: 0.1)
                                     : const Color(0xFFF1F5F9),
                                 child: IconButton(
                                   onPressed: () {
@@ -347,7 +347,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                               const SizedBox(width: 12),
                               CircleAvatar(
                                 backgroundColor: _isMicMuted
-                                    ? const Color(0xFFEF4444).withOpacity(0.1)
+                                    ? const Color(0xFFEF4444).withValues(alpha: 0.1)
                                     : const Color(0xFFF1F5F9),
                                 child: IconButton(
                                   onPressed: () {
@@ -455,7 +455,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 10,
                       ),
                     ],
@@ -677,7 +677,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
+                  color: Colors.black.withValues(alpha: 0.05),
                   blurRadius: 10,
                 ),
               ],
@@ -749,7 +749,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                   children: [
                     CircleAvatar(
                       backgroundColor: _isCameraMuted
-                          ? const Color(0xFFEF4444).withOpacity(0.1)
+                          ? const Color(0xFFEF4444).withValues(alpha: 0.1)
                           : const Color(0xFFF1F5F9),
                       child: IconButton(
                         onPressed: () {
@@ -776,7 +776,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                     const SizedBox(width: 12),
                     CircleAvatar(
                       backgroundColor: _isMicMuted
-                          ? const Color(0xFFEF4444).withOpacity(0.1)
+                          ? const Color(0xFFEF4444).withValues(alpha: 0.1)
                           : const Color(0xFFF1F5F9),
                       child: IconButton(
                         onPressed: () {
@@ -871,7 +871,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
@@ -944,7 +944,7 @@ class _InterviewScreenState extends State<InterviewScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
+                  color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Text(
@@ -997,8 +997,8 @@ class _InterviewScreenState extends State<InterviewScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
-        border: Border.all(color: color.withOpacity(0.1)),
+        color: color.withValues(alpha: 0.05),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(

@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "73267340796",
+    "firebase_url": "https://hae-free-7c13f-default-rtdb.firebaseio.com",
+    "project_id": "hae-free-7c13f",
+    "storage_bucket": "hae-free-7c13f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:73267340796:android:81470d8bb26df10738fe79",
+        "android_client_info": {
+          "package_name": "com.example.hassle_free"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "73267340796-iqe4lg6ug088mk4mrt176mg64s10c5e5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARfJxRyQ0GJlYsCpHm2SUMAa7SCapmEPk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "73267340796-iqe4lg6ug088mk4mrt176mg64s10c5e5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "73267340796-3jaoipqikf1fgen9nna1kg571g4mp1sa.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.hassleFree"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

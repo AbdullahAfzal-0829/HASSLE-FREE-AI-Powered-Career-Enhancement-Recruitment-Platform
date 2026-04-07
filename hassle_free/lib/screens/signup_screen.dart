@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:linkedin_login/linkedin_login.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../services/auth_service.dart';
+import '../widgets/google_sign_in/google_button.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -18,40 +20,80 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
+  final AuthService _authService = AuthService();
 
   Future<void> _signUp() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+    final name = _nameController.text.trim();
+
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      _showDialog('Error', 'Please fill all required fields');
+      return;
+    }
+
+    if (password != confirmPassword) {
       _showDialog('Error', 'Passwords do not match');
       return;
     }
-    setState(() => _isLoading = true);
-    // Simulate network delay
-    await Future.delayed(const Duration(seconds: 1));
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
-      );
-    }
-    setState(() => _isLoading = false);
-  }
 
-  Future<void> _handleGoogleSignUp() async {
     setState(() => _isLoading = true);
     try {
-      await GoogleSignIn.instance.authenticate();
-      // Successful sign-in
+      final userCredential = await _authService.signUpWithEmailPassword(email, password);
+      
+      // Update display name
+      await userCredential.user?.updateDisplayName(name);
+      
       if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account created successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
         );
       }
+    } catch (e) {
+      if (mounted) {
+        _showDialog('Sign Up Failed', e.toString());
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    try {
+      setState(() => _isLoading = true);
+      final GoogleSignInAccount? googleUser = await _authService.signInWithGoogle();
+      
+      if (googleUser != null) {
+        debugPrint('Google Sign Up Success: ${googleUser.email}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Account created with Google: ${googleUser.displayName}!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
+          );
+        }
+      }
     } catch (error) {
-      debugPrint('Google Sign-Up Error: $error');
+      debugPrint('Google Sign Up Error: $error');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to sign up with Google: $error')),
+          SnackBar(
+            content: Text('Google Sign Up failed. Please try again.'),
+            backgroundColor: Colors.redAccent,
+          ),
         );
       }
     } finally {
@@ -137,7 +179,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B26F2).withOpacity(0.3),
+                      color: const Color(0xFF3B26F2).withValues(alpha: 0.3),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -173,7 +215,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 40,
                       offset: const Offset(0, 20),
                     ),
@@ -223,7 +265,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           borderRadius: BorderRadius.circular(12),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF3B26F2).withOpacity(0.3),
+                              color: const Color(0xFF3B26F2).withValues(alpha: 0.3),
                               blurRadius: 15,
                               offset: const Offset(0, 8),
                             ),
@@ -269,9 +311,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: _buildSocialButton(
-                            icon: FontAwesomeIcons.google,
-                            label: 'Google',
+                          child: buildGoogleSignInButton(
                             onPressed: _handleGoogleSignUp,
                           ),
                         ),

@@ -142,7 +142,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
@@ -251,7 +251,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -270,7 +270,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 40),
                 decoration: BoxDecoration(
                   border: Border.all(
-                    color: const Color(0xFF3B26F2).withOpacity(0.3),
+                    color: const Color(0xFF3B26F2).withValues(alpha: 0.3),
                     width: 2,
                   ),
                   borderRadius: BorderRadius.circular(16),
@@ -367,7 +367,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
@@ -430,7 +430,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -467,7 +467,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
             ],
           ),
           child: Column(
@@ -573,7 +573,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
         ],
       ),
       child: Column(
@@ -600,7 +600,7 @@ class _ResumeScreenState extends State<ResumeScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9).withOpacity(0.5),
+        color: const Color(0xFFF1F5F9).withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white),
       ),

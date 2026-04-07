@@ -1,26 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
+import 'services/auth_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   debugPrint('App starting...');
-  runApp(const MyApp());
   
-  // Initialize Google Sign-In in the background to prevent blocking UI start
-  _initGoogleSignIn();
-}
-
-Future<void> _initGoogleSignIn() async {
   try {
-    debugPrint('Initializing Google Sign-In...');
-    // Only await if you absolutely need it before the first screen, 
-    // but here it's safer to not block the main function.
-    await GoogleSignIn.instance.initialize();
-    debugPrint('Google Sign-In initialization completed.');
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    debugPrint('Firebase initialized successfully');
   } catch (e) {
-    debugPrint('Google Sign-In initialization failed: $e');
+    debugPrint('Firebase initialization failed: $e');
   }
+  
+  // Initialize Google Sign-In for v7.x+
+  await AuthService().init();
+  
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {

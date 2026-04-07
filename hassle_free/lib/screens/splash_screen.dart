@@ -41,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
               height: 120,
               width: 120,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Center(
@@ -87,7 +87,7 @@ class _SplashScreenState extends State<SplashScreen> {
       width: 8,
       height: 8,
       decoration: BoxDecoration(
-        color: isActive ? Colors.white : Colors.white.withOpacity(0.4),
+        color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.4),
         shape: BoxShape.circle,
       ),
     );
