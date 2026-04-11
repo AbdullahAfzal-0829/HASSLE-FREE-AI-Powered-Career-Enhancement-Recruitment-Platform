@@ -6,6 +6,8 @@ Widget buildGoogleSignInButton({required VoidCallback onPressed}) {
   // The official button intercepts clicks, handles the popup securely, and triggers state updates.
   return SizedBox(
     height: 52,
-    child: web.renderButton(),
+    child: Center(
+      child: web.renderButton(),
+    ),
   );
 }

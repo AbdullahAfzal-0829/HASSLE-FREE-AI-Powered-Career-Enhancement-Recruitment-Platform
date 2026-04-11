@@ -4,22 +4,25 @@ Widget buildGoogleSignInButton({required VoidCallback onPressed}) {
   // On mobile, we use your custom button UI that calls the provided onPressed method.
   return SizedBox(
     height: 52,
-    child: OutlinedButton.icon(
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: Colors.grey[200]!),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
+    child: Center(
+      child: OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: Colors.grey[200]!),
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: Colors.white,
         ),
-        backgroundColor: Colors.white,
-      ),
-      onPressed: onPressed,
-      icon: const Icon(Icons.g_mobiledata, color: Colors.black87, size: 24),
-      label: const Text(
-        'Google',
-        style: TextStyle(
-          color: Colors.black87,
-          fontWeight: FontWeight.w600,
-          fontSize: 15,
+        onPressed: onPressed,
+        icon: const Icon(Icons.g_mobiledata, color: Colors.black87, size: 24),
+        label: const Text(
+          'Google',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.w600,
+            fontSize: 15,
+          ),
         ),
       ),
     ),

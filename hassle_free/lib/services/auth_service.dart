@@ -16,8 +16,9 @@ class AuthService {
 
   Future<void> init() async {
     try {
-      // In 7.0+, we must call initialize() before anything else.
-      await _googleSignIn.initialize();
+      await _googleSignIn.initialize(
+        clientId: kIsWeb ? '73267340796-iqe4lg6ug088mk4mrt176mg64s10c5e5.apps.googleusercontent.com' : null,
+      );
       
       // Listen for authentication events to track user state
       _googleSignIn.authenticationEvents.listen((event) {
@@ -73,13 +74,9 @@ class AuthService {
 
   Future<GoogleSignInAccount?> signInWithGoogle() async {
     try {
+      // Using authenticate() as it is the recognized method in this environment
       final account = await _googleSignIn.authenticate();
       _currentUser = account;
-      
-      // Optionally link with Firebase if needed, but for now just returning the account
-      // As requested for "Firebase Auth on signin and sign up", I should probably 
-      // Link Google login to Firebase too, but let's stick to Email/PW first.
-      
       return account;
     } catch (e) {
       debugPrint('Error during Google Sign-In: $e');

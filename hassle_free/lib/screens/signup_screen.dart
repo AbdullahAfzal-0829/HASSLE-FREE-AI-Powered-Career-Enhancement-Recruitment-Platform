@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:linkedin_login/linkedin_login.dart';
 import 'dashboard_screen.dart';
 import 'login_screen.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -101,35 +99,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  Future<void> _handleLinkedInSignUp() async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (BuildContext context) => LinkedInUserWidget(
-          appBar: AppBar(
-            title: const Text('LinkedIn Sign Up'),
-          ),
-          destroySession: false,
-          redirectUrl: 'YOUR_REDIRECT_URL',
-          clientId: 'YOUR_CLIENT_ID',
-          clientSecret: 'YOUR_CLIENT_SECRET',
-          onGetUserProfile: (UserSucceededAction response) {
-            debugPrint('LinkedIn Sign Up Success');
-            if (mounted) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const MainDashboardScreen()),
-              );
-            }
-          },
-          onError: (UserFailedAction error) {
-            debugPrint('LinkedIn Error: $error');
-          },
-        ),
-        fullscreenDialog: true,
-      ),
-    );
-  }
 
   void _showDialog(String title, String message) {
     showDialog(
@@ -308,22 +277,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ],
                     ),
                     const SizedBox(height: 24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: buildGoogleSignInButton(
-                            onPressed: _handleGoogleSignUp,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildSocialButton(
-                            icon: FontAwesomeIcons.linkedin,
-                            label: 'LinkedIn',
-                            onPressed: _handleLinkedInSignUp,
-                          ),
-                        ),
-                      ],
+                    Center(
+                      child: buildGoogleSignInButton(
+                        onPressed: _handleGoogleSignUp,
+                      ),
                     ),
                   ],
                 ),
@@ -358,34 +315,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
-  Widget _buildSocialButton({
-    required dynamic icon,
-    required String label,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      height: 52,
-      child: OutlinedButton.icon(
-        style: OutlinedButton.styleFrom(
-          side: BorderSide(color: Colors.grey[200]!),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          backgroundColor: Colors.white,
-        ),
-        onPressed: onPressed,
-        icon: FaIcon(icon, color: Colors.black87, size: 18),
-        label: Text(
-          label,
-          style: const TextStyle(
-            color: Colors.black87,
-            fontWeight: FontWeight.w600,
-            fontSize: 15,
-          ),
-        ),
-      ),
-    );
-  }
 
   Widget _buildInputField({
     required String label,
