@@ -605,143 +605,112 @@ class _InterviewScreenState extends State<InterviewScreen> {
 
   Widget _buildMobileLayout() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'AI Mock Interview',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           const Text(
-            'Practice your interview skills with AI-powered feedback',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
+            'Practice your interview skills with AI feedback',
+            style: TextStyle(color: Colors.white60, fontSize: 13),
           ),
           const SizedBox(height: 24),
-          _buildVideoPlaceholder(
-            'Interview Module',
-            _isCameraMuted
-                ? 'Camera is OFF'
-                : (_isInterviewStarted ? 'Active Session' : 'Ready to start?'),
-            const Color(0xFF1E293B),
-            Icons.videocam,
-            false,
-            isCamera: true,
-            child: (_isInterviewStarted && _cameraController != null)
-                ? FutureBuilder<void>(
-                    future: _initializeControllerFuture,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.done) {
-                        return Stack(
-                          fit: StackFit.expand,
-                          children: [
-                            CameraPreview(_cameraController!),
-                            if (_isCameraMuted)
-                              Container(
-                                color: const Color(0xFF1E293B),
-                                child: Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Icon(
-                                        Icons.videocam_off,
-                                        color: Colors.white,
-                                        size: 48,
+          // Video Row (Matches Web Layout but for Mobile)
+          Row(
+            children: [
+              Expanded(
+                child: _buildVideoPlaceholder(
+                  'AI Interviewer',
+                  'Sarah AI',
+                  const Color(0xFFE0E7FF),
+                  Icons.auto_awesome,
+                  true,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildVideoPlaceholder(
+                  'You',
+                  _isCameraMuted ? 'Camera OFF' : 'Your feed',
+                  const Color(0xFF1E293B),
+                  Icons.person,
+                  false,
+                  isCamera: true,
+                  child: (_isInterviewStarted && _cameraController != null)
+                      ? FutureBuilder<void>(
+                          future: _initializeControllerFuture,
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.done) {
+                              return Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  CameraPreview(_cameraController!),
+                                  if (_isCameraMuted)
+                                    Container(
+                                      color: const Color(0xFF1E293B),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.videocam_off,
+                                          color: Colors.white,
+                                          size: 32,
+                                        ),
                                       ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Camera is OFF',
-                                        style: TextStyle(color: Colors.white70),
-                                      ),
-                                    ],
-                                  ),
+                                    ),
+                                ],
+                              );
+                            } else {
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
                                 ),
-                              ),
-                          ],
-                        );
-                      } else {
-                        return const Center(
-                          child: CircularProgressIndicator(color: Colors.white),
-                        );
-                      }
-                    },
-                  )
-                : null,
+                              );
+                            }
+                          },
+                        )
+                      : null,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
+          // Question Card (Matches Web Theme)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  blurRadius: 10,
-                ),
-              ],
+              color: const Color(0xFF1E293B), // Matches Web Cards
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Icon(Icons.trending_up, color: Color(0xFF3B26F2), size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      'Real-time Feedback',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildProgressMetric('Clarity', _clarity),
-                const SizedBox(height: 16),
-                _buildProgressMetric('Confidence', _confidence),
-                const SizedBox(height: 16),
-                _buildProgressMetric('Technical Depth', _technicalDepth),
-                const SizedBox(height: 16),
-                _buildProgressMetric('Communication', _communication),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          if (!_isInterviewStarted)
-            ElevatedButton(
-              onPressed: _startInterview,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B26F2),
-                minimumSize: const Size(double.infinity, 60),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
-              child: const Text(
-                'Start Interview',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            )
-          else
-            Column(
-              children: [
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: const Color(0xFF3B26F2).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    _questions[_currentQuestionIndex],
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    'Question ${_currentQuestionIndex + 1}/${_questions.length}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF818CF8),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  _questions[_currentQuestionIndex],
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -750,35 +719,31 @@ class _InterviewScreenState extends State<InterviewScreen> {
                     CircleAvatar(
                       backgroundColor: _isCameraMuted
                           ? const Color(0xFFEF4444).withValues(alpha: 0.1)
-                          : const Color(0xFFF1F5F9),
+                          : Colors.white.withValues(alpha: 0.05),
+                      radius: 18,
                       child: IconButton(
+                        iconSize: 16,
                         onPressed: () {
                           setState(() {
                             _isCameraMuted = !_isCameraMuted;
-                            if (_cameraController != null) {
-                              if (_isCameraMuted) {
-                                _cameraController?.pausePreview();
-                              } else {
-                                _cameraController?.resumePreview();
-                              }
-                            }
                           });
                         },
                         icon: Icon(
                           _isCameraMuted ? Icons.videocam_off : Icons.videocam,
-                          size: 18,
                           color: _isCameraMuted
                               ? const Color(0xFFEF4444)
-                              : Colors.black87,
+                              : Colors.white70,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     CircleAvatar(
                       backgroundColor: _isMicMuted
                           ? const Color(0xFFEF4444).withValues(alpha: 0.1)
-                          : const Color(0xFFF1F5F9),
+                          : Colors.white.withValues(alpha: 0.05),
+                      radius: 18,
                       child: IconButton(
+                        iconSize: 16,
                         onPressed: () {
                           setState(() {
                             _isMicMuted = !_isMicMuted;
@@ -786,58 +751,128 @@ class _InterviewScreenState extends State<InterviewScreen> {
                         },
                         icon: Icon(
                           _isMicMuted ? Icons.mic_off : Icons.mic,
-                          size: 18,
                           color: _isMicMuted
                               ? const Color(0xFFEF4444)
-                              : Colors.black87,
+                              : Colors.white70,
                         ),
                       ),
                     ),
                     const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _isInterviewStarted = false;
-                        });
-                      },
-                      child: const Text(
-                        'End',
-                        style: TextStyle(color: Colors.grey),
+                    if (!_isInterviewStarted)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366F1),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: _startInterview,
+                        child: const Text('Start', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      )
+                    else
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366F1),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            if (_currentQuestionIndex < _questions.length - 1) {
+                              _currentQuestionIndex++;
+                            } else {
+                              _finishInterview();
+                            }
+                          });
+                        },
+                        child: Text(
+                          _currentQuestionIndex < _questions.length - 1 ? 'Next' : 'Finish',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
                       ),
-                    ),
                   ],
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {
-                    if (_currentQuestionIndex < _questions.length - 1) {
-                      setState(() {
-                        _currentQuestionIndex++;
-                      });
-                    } else {
-                      _finishInterview();
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B26F2),
-                    minimumSize: const Size(double.infinity, 60),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Text(
-                    _currentQuestionIndex < _questions.length - 1
-                        ? 'Next Question'
-                        : 'Finish & Analyze',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 16),
+          // Live Feedback Panel
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1E293B),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Live Feedback',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+                const SizedBox(height: 16),
+                if (!_isInterviewStarted)
+                  Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.auto_awesome, color: Colors.white24, size: 48),
+                        const SizedBox(height: 12),
+                        const Text('Start practice to see feedback', style: TextStyle(color: Colors.white38, fontSize: 13)),
+                      ],
+                    ),
+                  )
+                else
+                  Column(
+                    children: [
+                      _buildProgressMetric('Clarity', _clarity),
+                      const SizedBox(height: 12),
+                      _buildProgressMetric('Confidence', _confidence),
+                      const SizedBox(height: 12),
+                      _buildProgressMetric('Technical', _technicalDepth),
+                      const SizedBox(height: 12),
+                      _buildProgressMetric('Communication', _communication),
+                    ],
+                  ),
+              ],
+            ),
+          ),
+          if (!_isInterviewStarted && _clarity > 0) ...[
+            const SizedBox(height: 32),
+            const Text(
+              'Detailed Feedback',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            if (_backendFeedback.isNotEmpty)
+              ListView.separated(
+                padding: EdgeInsets.zero,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _backendFeedback.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 16),
+                itemBuilder: (context, index) {
+                  final f = _backendFeedback[index];
+                  return _buildFeedbackCard(
+                    f['label'],
+                    '${f['score'].toInt()}/100',
+                    f['text'],
+                    f['label'] == 'Communication' ? Colors.greenAccent : Colors.blueAccent,
+                  );
+                },
+              )
+            else
+              const Text('Analysis results will appear here.', style: TextStyle(color: Colors.white54)),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                minimumSize: const Size(double.infinity, 55),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              onPressed: _startInterview,
+              child: const Text('Practice Again', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            ),
+          ],
         ],
       ),
     );
@@ -861,56 +896,55 @@ class _InterviewScreenState extends State<InterviewScreen> {
       ),
       child: Stack(
         children: [
-          ?child,
-          if (child == null)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  if (isCamera && !_isInterviewStarted)
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.videocam,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    )
-                  else if (isCamera && _isInterviewStarted)
-                    const Icon(Icons.person, color: Colors.white54, size: 64)
-                  else
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF3B26F2), Color(0xFF9042F6)],
+          child ??
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (isCamera && !_isInterviewStarted)
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
                         ),
-                        shape: BoxShape.circle,
+                        child: const Icon(
+                          Icons.videocam,
+                          color: Colors.white,
+                          size: 32,
+                        ),
+                      )
+                    else if (isCamera && _isInterviewStarted)
+                      const Icon(Icons.person, color: Colors.white54, size: 64)
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF3B26F2), Color(0xFF9042F6)],
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(icon, color: Colors.white, size: 32),
                       ),
-                      child: Icon(icon, color: Colors.white, size: 32),
+                    const SizedBox(height: 16),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: isCamera ? Colors.white : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  const SizedBox(height: 16),
-                  Text(
-                    label,
-                    style: TextStyle(
-                      color: isCamera ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.bold,
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: isCamera ? Colors.white70 : Colors.black54,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      color: isCamera ? Colors.white70 : Colors.black54,
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
           if (isLive)
             Positioned(
               top: 16,

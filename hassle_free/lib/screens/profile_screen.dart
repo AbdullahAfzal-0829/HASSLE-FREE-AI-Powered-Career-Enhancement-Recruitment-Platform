@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../services/resume_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -8,16 +10,89 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  final ResumeService _resumeService = ResumeService();
+  String _name = "User";
+  String _education = "";
+  String _experience = "";
+  List<String> _skills = [];
+  bool _isLoading = true;
+  StreamSubscription? _resumeSubscription;
+
   final List<Map<String, dynamic>> _badges = [
-    {'title': 'Top Technical', 'icon': Icons.code, 'color': Colors.blue},
-    {'title': 'Analytical Expert', 'icon': Icons.analytics, 'color': Colors.purple},
-    {'title': 'Effective Communicator', 'icon': Icons.chat_bubble, 'color': Colors.green},
-    {'title': 'Fast Learner', 'icon': Icons.bolt, 'color': Colors.orange},
+    {'title': 'Top Technical', 'icon': Icons.code, 'color': Colors.blueAccent},
+    {'title': 'Analytical Expert', 'icon': Icons.analytics, 'color': Colors.purpleAccent},
+    {'title': 'Effective Communicator', 'icon': Icons.chat_bubble, 'color': Colors.greenAccent},
+    {'title': 'Fast Learner', 'icon': Icons.bolt, 'color': Colors.orangeAccent},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+    _subscribeToProfileData();
+  }
+
+  Future<void> _loadInitialData() async {
+    final data = await _resumeService.getLatestResumeAnalysis();
+    if (data != null && mounted) {
+      setState(() {
+        _name = data['name'] ?? "User";
+        _education = data['education'] ?? "";
+        _experience = data['experience'] ?? "";
+        _skills = List<String>.from(data['skills'] ?? []);
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _subscribeToProfileData() {
+    _resumeSubscription = _resumeService.getLatestResumeAnalysisStream().listen(
+      (data) {
+        if (mounted) {
+          setState(() {
+            if (data != null) {
+              _name = data['name'] ?? "User";
+              _education = data['education'] ?? "";
+              _experience = data['experience'] ?? "";
+              _skills = List<String>.from(data['skills'] ?? []);
+            }
+            _isLoading = false;
+          });
+        }
+      },
+      onError: (error) {
+        debugPrint('Error in Profile Screen stream: $error');
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      },
+    );
+
+    // Safety timeout to prevent infinite loading if the stream is silent
+    Future.delayed(const Duration(seconds: 5), () {
+      if (mounted && _isLoading) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _resumeSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     bool isWeb = MediaQuery.of(context).size.width >= 1100;
+
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator(color: Color(0xFF6366F1)));
+    }
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(isWeb ? 32 : 20),
@@ -29,18 +104,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _buildEmployabilityScore(isWeb),
           const SizedBox(height: 32),
           const Text(
+            'Education Details',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          _buildEducationSection(),
+          const SizedBox(height: 32),
+          const Text(
+            'Professional Experience',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          const SizedBox(height: 16),
+          _buildExperienceSection(),
+          const SizedBox(height: 32),
+          const Text(
             'Achievements & Badges',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 16),
           _buildBadgeGrid(isWeb),
           const SizedBox(height: 32),
           const Text(
-            'Skills & Endorsements',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            'Technical Expertise',
+            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 16),
           _buildSkillsSection(),
+          const SizedBox(height: 40),
         ],
       ),
     );
@@ -50,47 +140,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFF1E293B),
         borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10)),
         ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 50,
-            backgroundImage: const NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=Sarah'),
-            backgroundColor: Colors.grey[200],
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)]),
+            ),
+            child: CircleAvatar(
+              radius: 50,
+              backgroundImage: NetworkImage('https://api.dicebear.com/7.x/avataaars/png?seed=$_name'),
+              backgroundColor: const Color(0xFF0F172A),
+            ),
           ),
           const SizedBox(width: 32),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Sarah Johnson',
-                  style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                Text(
+                  _name,
+                  style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: -0.5),
                 ),
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.location_on, size: 16, color: Colors.grey),
-                    SizedBox(width: 4),
-                    Text('Lahore, Punjab, Pakistan'),
+                    Icon(Icons.location_on, size: 16, color: Colors.white.withValues(alpha: 0.5)),
+                    const SizedBox(width: 4),
+                    Text('Lahore, Punjab, Pakistan', style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
                   ],
                 ),
                 const SizedBox(height: 12),
-                Text(
-                  'Senior Python Developer | AI Enthusiast',
-                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                  ),
+                  child: const Text(
+                    'AI-Analyzed Candidate',
+                    style: TextStyle(color: Color(0xFFA5B4FC), fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     _buildStatMini('12', 'Projects'),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 32),
                     _buildStatMini('4.9', 'AI Rating'),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 32),
                     _buildStatMini('24', 'Applied'),
                   ],
                 ),
@@ -98,36 +204,144 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           if (isWeb)
-            ElevatedButton(
+            ElevatedButton.icon(
               onPressed: () {},
+              icon: const Icon(Icons.edit_outlined, size: 18),
+              label: const Text('Edit Profile'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B26F2),
+                backgroundColor: const Color(0xFF6366F1),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                elevation: 0,
               ),
-              child: const Text('Edit Profile'),
             ),
         ],
       ),
     );
   }
 
+  Widget _buildEducationSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.school_outlined, color: Color(0xFF6366F1), size: 24),
+              const SizedBox(width: 12),
+              const Text("Extracted Academic History", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ..._formatContent(_education.isEmpty ? "No education details found in the latest resume." : _education),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExperienceSection() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.work_outline, color: Color(0xFF6366F1), size: 24),
+              const SizedBox(width: 12),
+              const Text("Extracted Working Experience", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+            ],
+          ),
+          const SizedBox(height: 20),
+          ..._formatContent(_experience.isEmpty ? "No experience details found in the latest resume." : _experience),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _formatContent(String content) {
+    if (content.isEmpty || content.startsWith("No ")) {
+      return [Text(content, style: TextStyle(fontSize: 15, height: 1.6, color: Colors.white.withValues(alpha: 0.8)))];
+    }
+
+    List<String> lines = content.split('\n');
+    return lines.map((line) {
+      String cleanLine = line.trim();
+      if (cleanLine.isEmpty) return const SizedBox(height: 8);
+
+      // Regex for dates like "Feb 2025 - Apr 2025" or "2022 - 2026"
+      final datePattern = RegExp(r'([A-Za-z]+ \d{4} - [A-Za-z]+ \d{4})|(\d{4}\s*-\s*\d{4})');
+      final match = datePattern.firstMatch(cleanLine);
+
+      if (match != null) {
+        String dateStr = match.group(0)!;
+        String titleStr = cleanLine.replaceFirst(dateStr, '').trim();
+        titleStr = titleStr.replaceAll(RegExp(r'[|]\s*$'), '').trim();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: Text(titleStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))),
+              Text(dateStr, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            ],
+          ),
+        );
+      }
+
+      bool isBullet = cleanLine.startsWith('•') || cleanLine.startsWith('*') || cleanLine.startsWith('-');
+      return Padding(
+        padding: EdgeInsets.only(left: isBullet ? 12 : 0, bottom: 4),
+        child: Text(
+          cleanLine,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.8),
+            fontSize: 14,
+            height: 1.4,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
   Widget _buildStatMini(String value, String label) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white)),
+        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12)),
       ],
     );
   }
 
   Widget _buildEmployabilityScore(bool isWeb) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFF3B26F2), Color(0xFF9042F6)]),
-        borderRadius: BorderRadius.circular(20),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(color: const Color(0xFF6366F1).withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 10)),
+        ],
       ),
       child: Row(
         children: [
@@ -136,21 +350,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Overall Employability Score',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  'Employability Score',
+                  style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                const Text(
-                  'Your score is based on technical skills, interview performance, and profile completeness.',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                Text(
+                  'AI-powered analysis of your technical profile and experience.',
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 14),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 Row(
                   children: [
                     _buildScorePart('Technical', '9.2'),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 32),
                     _buildScorePart('Soft Skills', '8.5'),
-                    const SizedBox(width: 24),
+                    const SizedBox(width: 32),
                     _buildScorePart('Interview', '8.8'),
                   ],
                 ),
@@ -158,12 +372,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+            height: 100,
+            width: 100,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
+            ),
             child: const Column(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text('8.8', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                Text('/ 10', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                Text('/ 10', style: TextStyle(color: Colors.white70, fontSize: 12)),
               ],
             ),
           ),
@@ -176,8 +396,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
+        Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 20)),
+        Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
       ],
     );
   }
@@ -191,26 +411,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         crossAxisCount: isWeb ? 4 : 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 2.2,
+        childAspectRatio: 2.5,
       ),
       itemBuilder: (context, index) {
         var b = _badges[index];
         return Container(
-          padding: const EdgeInsets.all(12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10)],
-            border: Border.all(color: b['color'].withValues(alpha: 0.1), width: 1.5),
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: (b['color'] as Color).withValues(alpha: 0.2), width: 1.5),
           ),
           child: Row(
             children: [
-              Icon(b['icon'], color: b['color'], size: 28),
+              Icon(b['icon'], color: b['color'], size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   b['title'],
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.white),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -223,24 +442,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildSkillsSection() {
-    final skills = ['Python', 'Django', 'FastAPI', 'Flutter', 'TensorFlow', 'PostgreSQL', 'Docker', 'AWS', 'Agile'];
+    final skillsToShow = _skills.isEmpty ? ['No skills extracted'] : _skills;
     return Wrap(
       spacing: 12,
       runSpacing: 12,
-      children: skills
+      children: skillsToShow
           .map((s) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(s, style: const TextStyle(fontWeight: FontWeight.w600)),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.verified, color: Colors.blue, size: 16),
+                    Text(s, style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.white, fontSize: 14)),
+                    if (_skills.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      const Icon(Icons.verified, color: Color(0xFF6366F1), size: 16),
+                    ],
                   ],
                 ),
               ))
@@ -248,3 +469,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'signup_screen.dart';
 import 'dashboard_screen.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../services/auth_service.dart';
 import '../widgets/google_sign_in/google_button.dart';
 
@@ -63,14 +62,15 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _handleGoogleSignIn() async {
     try {
       setState(() => _isLoading = true);
-      final GoogleSignInAccount? googleUser = await _authService.signInWithGoogle();
+      final userCredential = await _authService.signInWithGoogle();
       
-      if (googleUser != null) {
-        debugPrint('Google Login Success: ${googleUser.email}');
+      if (userCredential != null && userCredential.user != null) {
+        final user = userCredential.user!;
+        debugPrint('Google Login Success: ${user.email}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Welcome, ${googleUser.displayName}!'),
+              content: Text('Welcome, ${user.displayName ?? "User"}!'),
               backgroundColor: Colors.green,
             ),
           );

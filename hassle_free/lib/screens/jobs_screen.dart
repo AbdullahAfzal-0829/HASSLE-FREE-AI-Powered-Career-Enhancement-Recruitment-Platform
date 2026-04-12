@@ -70,7 +70,7 @@ class _JobsScreenState extends State<JobsScreen> {
           const SizedBox(height: 32),
           Text(
             isWeb ? 'Recommended for You' : 'Top Recommendations',
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white),
           ),
           const SizedBox(height: 20),
           isWeb
@@ -95,11 +95,11 @@ class _JobsScreenState extends State<JobsScreen> {
           children: [
             const Text(
               'Explore Opportunities',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             Text(
               'AI matched jobs based on your parsed skills',
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.white60),
             ),
           ],
         ),
@@ -109,8 +109,8 @@ class _JobsScreenState extends State<JobsScreen> {
             icon: const Icon(Icons.filter_list, size: 18),
             label: const Text('Advanced Filter'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFF1F5F9),
-              foregroundColor: Colors.black,
+              backgroundColor: Colors.white.withValues(alpha: 0.1),
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -123,18 +123,17 @@ class _JobsScreenState extends State<JobsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 15, offset: const Offset(0, 5)),
-        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: const TextField(
+        style: TextStyle(color: Colors.white),
         decoration: InputDecoration(
           hintText: 'Search for jobs, companies, or keywords...',
           border: InputBorder.none,
-          prefixIcon: Icon(Icons.search, color: Color(0xFF3B26F2)),
-          hintStyle: TextStyle(color: Colors.grey),
+          prefixIcon: Icon(Icons.search, color: Color(0xFF6366F1)),
+          hintStyle: TextStyle(color: Colors.white24),
         ),
       ),
     );
@@ -163,12 +162,9 @@ class _JobsScreenState extends State<JobsScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
-        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -180,7 +176,7 @@ class _JobsScreenState extends State<JobsScreen> {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: Colors.white.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                   image: DecorationImage(image: NetworkImage(job['image']), fit: BoxFit.cover),
                 ),
@@ -194,7 +190,11 @@ class _JobsScreenState extends State<JobsScreen> {
                       children: [
                         Text(
                           job['title'],
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                         if (isHot)
                           Container(
@@ -214,7 +214,7 @@ class _JobsScreenState extends State<JobsScreen> {
                     const SizedBox(height: 4),
                     Text(
                       '${job['company']} • ${job['location']}',
-                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                      style: TextStyle(color: Colors.white60, fontSize: 14),
                     ),
                   ],
                 ),
@@ -231,7 +231,7 @@ class _JobsScreenState extends State<JobsScreen> {
                       '$score%',
                       style: TextStyle(color: _getScoreColor(score), fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    const Text('Match', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                    const Text('Match', style: TextStyle(color: Colors.white60, fontSize: 10)),
                   ],
                 ),
               ),
@@ -244,15 +244,15 @@ class _JobsScreenState extends State<JobsScreen> {
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
+                      color: Colors.white.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(tag, style: const TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                    child: Text(tag, style: const TextStyle(fontSize: 12, color: Colors.white60)),
                   )),
               const Spacer(),
               Text(
                 job['salary'],
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF3B26F2)),
+                style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
               ),
             ],
           ),

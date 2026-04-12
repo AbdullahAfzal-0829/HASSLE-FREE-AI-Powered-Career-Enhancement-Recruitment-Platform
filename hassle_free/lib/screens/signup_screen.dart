@@ -67,14 +67,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _handleGoogleSignUp() async {
     try {
       setState(() => _isLoading = true);
-      final GoogleSignInAccount? googleUser = await _authService.signInWithGoogle();
+      final userCredential = await _authService.signInWithGoogle();
       
-      if (googleUser != null) {
-        debugPrint('Google Sign Up Success: ${googleUser.email}');
+      if (userCredential != null && userCredential.user != null) {
+        final user = userCredential.user!;
+        debugPrint('Google Sign Up Success: ${user.email}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Account created with Google: ${googleUser.displayName}!'),
+              content: Text('Account created with Google: ${user.displayName ?? "User"}!'),
               backgroundColor: Colors.green,
             ),
           );

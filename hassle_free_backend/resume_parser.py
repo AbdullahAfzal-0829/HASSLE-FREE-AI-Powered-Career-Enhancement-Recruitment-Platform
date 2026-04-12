@@ -6,7 +6,7 @@ import spacy
 import nltk
 from docx import Document
 from nltk.corpus import stopwords
-import torch
+import pickle
 import numpy as np
 
 # Load NLP models and tools
@@ -18,13 +18,14 @@ except Exception as e:
     print(f"Warning: Error loading NLP tools: {e}")
     nlp = None
 
-# For the AI Model (Hugging Face Transformers)
+# For the AI Model
 try:
-    from transformers import AutoTokenizer, AutoModelForSequenceClassification
     MODEL_PATH = "hassle_free_model"
-    if os.path.exists(MODEL_PATH):
-        tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-        model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+    if os.path.exists(os.path.join(MODEL_PATH, "model.pkl")):
+        with open(os.path.join(MODEL_PATH, "model.pkl"), 'rb') as f:
+            model = pickle.load(f)
+        with open(os.path.join(MODEL_PATH, "vectorizer.pkl"), 'rb') as f:
+            vectorizer = pickle.load(f)
         classes = np.load('classes.npy', allow_pickle=True)
         HAS_AI_MODEL = True
     else:
@@ -32,27 +33,39 @@ try:
 except Exception:
     HAS_AI_MODEL = False
 
-# A basic dictionary of skills to look for in the text (fallback)
+# High-fidelity Skill Dictionary
 KNOWN_SKILLS = {
-    "python", "java", "javascript", "c++", "c#", "ruby", "php", "swift", "kotlin",
-    "html", "css", "react", "angular", "vue", "node.js", "django", "flask", "spring",
-    "sql", "mysql", "postgresql", "mongodb", "nosql", "firebase", "aws", "azure", "gcp",
-    "docker", "kubernetes", "git", "ci/cd", "agile", "scrum", "machine learning",
-    "artificial intelligence", "data science", "nlp", "tensorflow", "pytorch", "spacy",
-    "pandas", "numpy", "matplotlib", "flutter", "dart", "react native",
-    "wireshark", "cisco packet tracer", "android studio", "visual studio code",
-    "sqlite", "sqlite3", "mysql", "microsoft office", "excel", "word", "powerpoint",
-    "xml", "json", "rest api", "api", "software proficiency", "language", "english", "urdu"
+    "python", "java", "javascript", "c++", "c#", "ruby", "php", "swift", "kotlin", "go", "rust", "typescript",
+    "html", "css", "react", "angular", "vue", "next.js", "tailwind", "bootstrap", "jquery", "sass",
+    "node.js", "django", "flask", "spring", "laravel", "dotnet", "fastapi", "express",
+    "sql", "mysql", "postgresql", "mongodb", "nosql", "firebase", "redis", "oracle", "mariadb",
+    "aws", "azure", "gcp", "docker", "kubernetes", "git", "ci/cd", "terraform", "ansible", "jenkins",
+    "machine learning", "artificial intelligence", "data science", "nlp", "tensorflow", "pytorch", 
+    "spacy", "pandas", "numpy", "matplotlib", "scikit-learn", "keras", "deep learning", "opencv",
+    "flutter", "dart", "react native", "swiftui", "android studio", "xcode", "wireshark", "cisco packet tracer",
+    "vs code", "visual studio", "sqlite", "rest api", "api", "json", "xml", "agile", "scrum", "excel", "powerpoint", "word"
+}
+
+# Extensive Tech/Section Blacklist
+NAME_BLACKLIST = {
+    "skill", "skills", "education", "experience", "profile", "summary", "contact", 
+    "projects", "objective", "certifications", "interests", "languages", "language",
+    "software", "technical", "personal", "soft", "proficiency", "hobbies", "project",
+    "java", "kotlin", "firebase", "android", "studio", "python", "mysql", "git", "github",
+    "linkedin", "email", "phone", "address", "curriculum", "vitae", "resume", "university", "college",
+    "academy", "graduate", "certified", "certificate", "associate", "professional", "intern", "internship"
 }
 
 def extract_text(file_content, file_ext):
-    """Extracts text from PDF or DOCX bytes."""
     text = ""
     try:
         if file_ext == 'pdf':
             reader = PyPDF2.PdfReader(io.BytesIO(file_content))
             for page in reader.pages:
-                text += page.extract_text() + " "
+                page_text = page.extract_text()
+                if page_text:
+                    page_text = page_text.replace('\u0000', '') 
+                    text += page_text + "\n"
         elif file_ext == 'docx':
             doc = Document(io.BytesIO(file_content))
             for para in doc.paragraphs:
@@ -62,121 +75,126 @@ def extract_text(file_content, file_ext):
     return text
 
 def clean_resume(text):
-    """Cleans text for processing."""
+    if not text: return ""
     text = re.sub(r'http\S+\s*', ' ', text)
-    text = re.sub(r'[^\x00-\x7f]', r' ', text)
+    text = re.sub(r'[^\x00-\x7f]', r' ', text) 
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
-def extract_skills(text):
-    """Finds known skills in the text."""
-    if not text: return []
-    text_lower = text.lower()
-    detected_skills = set()
-    words = re.findall(r'\b[\w\.\+#-]+\b', text_lower)
-    for word in words:
-        if word in KNOWN_SKILLS:
-            detected_skills.add(word)
-    multi_word_skills = [s for s in KNOWN_SKILLS if " " in s]
-    for mws in multi_word_skills:
-        if mws in text_lower:
-            detected_skills.add(mws)
-    return list(detected_skills)
+def is_valid_name_format(name):
+    name = name.strip()
+    if not name or len(name) < 4: return False
+    words = name.split()
+    if len(words) < 2 or len(words) > 4: return False
+    
+    # Check if words are plausible names (Starts with Capital)
+    if not all(w[0].isupper() for w in words if w[0].isalpha()): return False
+    
+    # Check if any word is completely capitalized (often indicates a tech acronym)
+    if any(w.isupper() and len(w) > 2 for w in words): return False
+    
+    # Check blacklist
+    lower_name = name.lower()
+    if any(k in lower_name for k in NAME_BLACKLIST): return False
+    
+    # No numbers or tech symbols
+    if any(char.isdigit() or char in "[]{}()_/" for char in name): return False
+    
+    return True
 
 def extract_name(text):
-    """Extracts the name from the resume text using NER and custom filtering."""
-    if not text: return "User"
+    if not text: return "Candidate"
     
-    # Priority 1: Check if "Muhammad Abdullah Afzal" or just "Muhammad" is in the text
-    # This ensures a 100% match for your specific resume format.
-    text_lower = text.lower()
-    if "muhammad" in text_lower and "afzal" in text_lower:
-        return "Muhammad Abdullah Afzal"
-    
-    # Pre-clean text for name extraction (remove extra symbols)
-    clean_section = re.sub(r'[^a-zA-Z\s\n]', ' ', text[:1500])
-    
-    # 2. Try NER but be VERY selective
+    # NLP Page 1 scan
     if nlp:
-        doc = nlp(clean_section)
+        doc = nlp(text[:1500])
         for ent in doc.ents:
             if ent.label_ == "PERSON":
-                name = ent.text.strip()
-                parts = name.split()
-                if 2 <= len(parts) <= 4:
-                    if not any(p.lower() in KNOWN_SKILLS for p in parts):
-                        headers = ["experience", "projects", "education", "skills", "about", "proficiency", "foundations", "academy"]
-                        if not any(h in name.lower() for h in headers):
-                            return name
+                cand = ent.text.strip()
+                if is_valid_name_format(cand):
+                    return cand.title()
     
-    # 3. Fallback: Search line by line
-    lines = [l.strip() for l in text.split('\n') if len(l.strip()) > 2]
-    ignore_headers = [
-        "resume", "curriculum", "vitae", "proficiency", "skills", "contact", "about",
-        "foundations", "academy", "graduate", "university", "college", "education",
-        "experience", "project", "systems", "lahore", "punjab"
-    ]
-    
-    for line in lines[:20]:
-        words = line.split()
-        if 2 <= len(words) <= 4:
-            if all(w[0].isupper() for w in words if w[0].isalpha()):
-                if not any(w.lower() in KNOWN_SKILLS for w in words):
-                    if not any(h in line.lower() for h in ignore_headers):
-                        return line
+    # Deep line scan
+    lines = [l.strip() for l in text.split('\n') if len(l.strip()) > 3]
+    for line in lines[:20]: 
+        if is_valid_name_format(line):
+            return line.title()
             
-    return "User"
+    return "Candidate"
 
-def predict_category(text):
-    """Predicts Job Category using the trained AI model (falls back to Web Dev)."""
-    if not HAS_AI_MODEL:
-        return "Web Developer (AI Model not loaded)"
+def extract_skills(text):
+    if not text: return []
+    text_lower = text.lower()
+    detected = {skill for skill in KNOWN_SKILLS if skill in text_lower}
+    return sorted(list(detected))
+
+def extract_sections(text):
+    sections = {"experience": [], "education": []}
+    
+    exp_headers = [r'experience', r'employment', r'work history', r'projects', r'job profile', r'professional background']
+    edu_headers = [r'education', r'academic', r'qualifications', r'certifications']
+    
+    # Only stop if it's a major section break that's NOT related to exp/edu
+    stop_headers = [r'skills', r'summary', r'languages', r'contact', r'interests', r'hobbies', r'references']
+    
+    lines = text.split('\n')
+    current_section = None
+    
+    for line in lines:
+        clean_line = line.strip().lower()
+        if not clean_line or len(clean_line) < 3: continue
         
-    cleaned = clean_resume(str(text)) if text else ""
-    if not cleaned:
-        return "Unknown"
+        # Check for Education Header
+        if any(re.search(r'\b' + h + r'\b', clean_line) for h in edu_headers):
+            # Only switch if this isn't already experience
+            if current_section != "experience":
+                current_section = "education"
+                continue
         
-    try:
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model.to(device)
-        # Ensure input is a string and not empty
-        inputs = tokenizer(
-            cleaned, 
-            return_tensors="pt", 
-            truncation=True, 
-            padding=True, 
-            max_length=512
-        ).to(device)
-        
-        with torch.no_grad():
-            logits = model(**inputs).logits
-        pred_idx = torch.argmax(logits, dim=1).item()
-        return str(classes[pred_idx])
-    except Exception as e:
-        print(f"AI Prediction error: {e}")
-        return "Web Developer (Fallback)"
+        # Check for Experience Header
+        if any(re.search(r'\b' + h + r'\b', clean_line) for h in exp_headers):
+            current_section = "experience"
+            continue
+            
+        # Check for Stop Header (only if it's a dedicated line)
+        if current_section and any(re.search(r'^' + s + r'$', clean_line) for s in stop_headers):
+            current_section = None
+            continue
+            
+        if current_section:
+            sections[current_section].append(line.strip())
+            if len(sections[current_section]) > 25: current_section = None
+            
+    return {
+        "experience": "\n".join(sections["experience"][:12]) if sections["experience"] else "No history found.",
+        "education": "\n".join(sections["education"][:8]) if sections["education"] else "No history found."
+    }
 
 def analyze_resume(file_bytes, filename):
-    """Orchestrates extraction, skill detection, and classification."""
     ext = filename.split('.')[-1].lower()
-    if ext not in ['pdf', 'docx']:
-        return {"error": "Unsupported file format. Use PDF or DOCX."}
-        
     raw_text = extract_text(file_bytes, ext)
-    if not raw_text:
-        return {"error": "Could not extract text from the file."}
-        
-    print(f"DEBUG: Extracted text start (100 chars): {raw_text[:100]}")
+    if not raw_text: return {"error": "Text extraction failed."}
     
-    cleaned_text = clean_resume(raw_text)
-    skills = extract_skills(cleaned_text)
-    category = predict_category(cleaned_text)
+    cleaned_all = clean_resume(raw_text)
     name = extract_name(raw_text)
+    
+    # Use AI for category
+    if HAS_AI_MODEL:
+        try:
+            feats = vectorizer.transform([cleaned_all])
+            cat = str(model.predict(feats)[0])
+        except: cat = "Information Technology"
+    else: cat = "Information Technology"
+        
+    skills = extract_skills(cleaned_all)
+    sects = extract_sections(raw_text)
     
     return {
         "status": "success",
         "name": name,
-        "category": category,
+        "category": cat,
         "skills": skills,
-        "text_preview": cleaned_text[:100] + "..."
+        "experience": sects["experience"],
+        "education": sects["education"],
+        "text_preview": cleaned_all[:400] + "..."
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'dart:convert';
+import '../services/resume_service.dart';
 
 class ResumeScreen extends StatefulWidget {
   final Function(String)? onNameExtracted;
@@ -16,23 +17,49 @@ class _ResumeScreenState extends State<ResumeScreen> {
   bool _isAnalyzed = false;
   double _uploadProgress = 0.0;
 
-  // Real data from API
   String _filename = "";
-  String _category = "Web Developer";
+  String _category = "Software Engineer";
   String _extractedName = "";
   List<String> _skills = [];
+  String _experience = "";
+  String _education = "";
   String _textPreview = "";
+  final ResumeService _resumeService = ResumeService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreviousAnalysis();
+  }
+
+  Future<void> _loadPreviousAnalysis() async {
+    final data = await _resumeService.getLatestResumeAnalysis();
+    if (data != null && mounted) {
+      if (mounted) {
+        setState(() {
+          _isAnalyzed = true;
+          _filename = data['filename'] ?? "";
+          _category = data['category'] ?? "Unknown";
+          _extractedName = data['name'] ?? "User";
+          _skills = List<String>.from(data['skills'] ?? []);
+          _experience = data['experience'] ?? "";
+          _education = data['education'] ?? "";
+          _textPreview = data['textPreview'] ?? "";
+        });
+        if (widget.onNameExtracted != null) widget.onNameExtracted!(_extractedName);
+      }
+    }
+  }
 
   Future<void> _pickAndUploadResume() async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'docx'],
-      withData: true, // Needed for Web and small files
+      withData: true,
     );
 
     if (result != null) {
       PlatformFile file = result.files.first;
-
       setState(() {
         _isUploading = true;
         _isAnalyzed = false;
@@ -41,525 +68,279 @@ class _ResumeScreenState extends State<ResumeScreen> {
       });
 
       try {
-        // Prepare multipart request
-        var request = http.MultipartRequest(
-          'POST',
-          Uri.parse('http://localhost:5002/api/upload-resume'),
-        );
-
+        var request = http.MultipartRequest('POST', Uri.parse('http://localhost:5002/api/upload-resume'));
         if (file.bytes != null) {
-          request.files.add(
-            http.MultipartFile.fromBytes(
-              'resume',
-              file.bytes!,
-              filename: file.name,
-            ),
-          );
-        } else if (file.path != null) {
-          request.files.add(
-            await http.MultipartFile.fromPath('resume', file.path!),
-          );
+          request.files.add(http.MultipartFile.fromBytes('resume', file.bytes!, filename: file.name));
         }
 
-        // Send request
         var streamedResponse = await request.send();
-
-        setState(() {
-          _uploadProgress = 0.7;
-        });
-
+        setState(() => _uploadProgress = 0.7);
         var response = await http.Response.fromStream(streamedResponse);
 
         if (response.statusCode == 200) {
           var data = json.decode(response.body);
-          setState(() {
-            _isUploading = false;
-            _isAnalyzed = true;
-            _uploadProgress = 1.0;
-            _category = data['category'] ?? "Unknown";
-            _extractedName = data['name'] ?? "User";
-            _skills = List<String>.from(data['detected_skills'] ?? []);
-            _textPreview = data['text_preview'] ?? "";
-          });
-          if (widget.onNameExtracted != null) {
-            widget.onNameExtracted!(_extractedName);
+          if (mounted) {
+            setState(() {
+              _isUploading = false;
+              _isAnalyzed = true;
+              _uploadProgress = 1.0;
+              _category = data['category'] ?? "Unknown";
+              _extractedName = data['name'] ?? "User";
+              _skills = List<String>.from(data['skills'] ?? []);
+              _experience = data['experience'] ?? "";
+              _education = data['education'] ?? "";
+              _textPreview = data['text_preview'] ?? "";
+            });
+            if (widget.onNameExtracted != null) widget.onNameExtracted!(_extractedName);
+
+            await _resumeService.saveResumeAnalysis(
+              filename: _filename,
+              category: _category,
+              name: _extractedName,
+              skills: _skills,
+              experience: _experience,
+              education: _education,
+              textPreview: _textPreview,
+            );
           }
-        } else {
-          throw Exception("Server error: ${response.statusCode}");
         }
       } catch (e) {
-        setState(() {
-          _isUploading = false;
-        });
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Error: $e")));
-        }
+        if (mounted) setState(() => _isUploading = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 1100) {
-          return _buildMobileLayout();
-        } else {
-          return _buildWebLayout();
-        }
-      },
-    );
-  }
-
-  Widget _buildWebLayout() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Banner
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(40),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [
-                  Color(0xFF6366F1),
-                  Color(0xFF8B5CF6),
-                  Color(0xFF06B6D4),
-                ],
-              ),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F172A),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            _buildHeroBanner(),
+            const SizedBox(height: 32),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                bool isWide = constraints.maxWidth > 1000;
+                return isWide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 3, child: _buildLeftColumn()),
+                          const SizedBox(width: 24),
+                          Expanded(flex: 2, child: _buildRightColumn()),
+                        ],
+                      )
+                    : Column(
+                        children: [
+                          _buildLeftColumn(),
+                          const SizedBox(height: 24),
+                          _buildRightColumn(),
+                        ],
+                      );
+              },
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.auto_awesome, color: Colors.white, size: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        'AI-Powered Analysis',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Resume Analysis',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Upload your resume and let our AI extract your skills, experience, and\nprovide insights to boost your career',
-                  style: TextStyle(color: Colors.white70, fontSize: 18),
-                ),
-                const SizedBox(height: 32),
-                Row(
-                  children: [
-                    _buildBannerStat('5sec', 'Analysis Time'),
-                    const SizedBox(width: 40),
-                    _buildBannerStat('95%', 'Accuracy'),
-                    const SizedBox(width: 40),
-                    _buildBannerStat('50+', 'Data Points'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 32),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                flex: 3,
-                child: Column(
-                  children: [
-                    _buildUploadCard(isWeb: true),
-                    if (_isAnalyzed) ...[
-                      const SizedBox(height: 24),
-                      _buildPreviewCard(),
-                    ],
-                  ],
-                ),
-              ),
-              const SizedBox(width: 32),
-              Expanded(
-                flex: 2,
-                child: _isAnalyzed
-                    ? _buildAnalysisResults()
-                    : _buildEmptyResultsPlaceholder(),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileLayout() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Resume Analysis',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Upload your resume and let AI do the magic',
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-          const SizedBox(height: 24),
-          _buildUploadCard(isWeb: false),
-          if (_isAnalyzed) ...[
-            const SizedBox(height: 24),
-            _buildMobileInsights(),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildUploadCard({required bool isWeb}) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Upload Resume',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 20),
-          if (!_isAnalyzed && !_isUploading)
-            GestureDetector(
-              onTap: _pickAndUploadResume,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 40),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: const Color(0xFF3B26F2).withValues(alpha: 0.3),
-                    width: 2,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  color: const Color(0xFFF8FAFC),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFF3B26F2), Color(0xFF9042F6)],
-                        ),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.upload_outlined,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Drop your resume here',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'or click to browse',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: _pickAndUploadResume,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF3B26F2),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 16,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'Choose File',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Supported formats: PDF, DOCX',
-                      style: TextStyle(color: Colors.grey, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else if (_isUploading)
-            Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Analyzing resume...',
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                    Text(
-                      '${(_uploadProgress * 100).toInt()}%',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                LinearProgressIndicator(
-                  value: _uploadProgress,
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  valueColor: const AlwaysStoppedAnimation<Color>(
-                    Color(0xFF3B26F2),
-                  ),
-                  minHeight: 8,
-                ),
-              ],
-            )
-          else
-            Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle, color: Colors.green),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Resume uploaded successfully!',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.green,
-                              ),
-                            ),
-                            Text(
-                              _filename,
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () => setState(() => _isAnalyzed = false),
-                        icon: const Icon(Icons.close, size: 16),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () => setState(() => _isAnalyzed = false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    side: BorderSide(color: Colors.grey.shade300),
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('Upload New Resume'),
-                ),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPreviewCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.description_outlined, color: Colors.grey),
-              SizedBox(width: 12),
-              Text(
-                'Resume Preview',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 12),
-          Text(
-            _textPreview.isEmpty ? "No preview available" : _textPreview,
-            style: const TextStyle(color: Colors.grey, height: 1.6),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildAnalysisResults() {
+  Widget _buildLeftColumn() {
     return Column(
       children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'AI Analysis Results',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
-              _buildAISummary(),
-              const SizedBox(height: 32),
-              const Text(
-                'Detected Skills',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _skills
-                    .map(
-                      (s) => Chip(
-                        label: Text(s, style: const TextStyle(fontSize: 12)),
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        side: BorderSide.none,
-                      ),
-                    )
-                    .toList(),
-              ),
-              if (_skills.isEmpty)
-                const Text(
-                  "No skills detected",
-                  style: TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-            ],
-          ),
-        ),
+        _buildUploadCard(),
+        if (_isAnalyzed) ...[
+          const SizedBox(height: 24),
+          _buildResultSectionCard("Experience", _experience, Icons.work),
+          const SizedBox(height: 24),
+          _buildResultSectionCard("Education", _education, Icons.school),
+        ],
       ],
     );
   }
 
-  Widget _buildAISummary() {
+  Widget _buildRightColumn() {
+    return _isAnalyzed ? _buildCandidateOverview() : _buildEmptyResultsPlaceholder();
+  }
+
+  Widget _buildHeroBanner() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      width: double.infinity,
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(colors: [Color(0xFF2563EB), Color(0xFF7C3AED)]),
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3B26F2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.auto_awesome,
-              color: Colors.white,
-              size: 16,
-            ),
+          const Text('Resume Analysis', style: TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          const Text('Let AI extract and visualize your professional profile', style: TextStyle(color: Colors.white70, fontSize: 16)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultSectionCard(String title, String content, IconData icon) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: Colors.blueAccent, size: 24),
+              const SizedBox(width: 12),
+              Text(title, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+            ],
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'AI Prediction',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'This resume belongs to: $_extractedName',
-                  style: const TextStyle(
-                    color: Color(0xFF3B26F2),
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Classified as: $_category',
-                  style: const TextStyle(
-                    color: Colors.grey,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 20),
+          ..._formatContent(content),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _formatContent(String content) {
+    if (content.isEmpty || content.contains("No history found")) {
+      return [const Text("No profile data found.", style: TextStyle(color: Colors.white38))];
+    }
+
+    List<String> lines = content.split('\n');
+    return lines.map((line) {
+      String cleanLine = line.trim();
+      if (cleanLine.isEmpty) return const SizedBox(height: 8);
+
+      // Regex for dates like "Feb 2025 - Apr 2025" or "2022 - 2026"
+      final datePattern = RegExp(r'([A-Za-z]+ \d{4} - [A-Za-z]+ \d{4})|(\d{4}\s*-\s*\d{4})');
+      final match = datePattern.firstMatch(cleanLine);
+
+      if (match != null) {
+        String dateStr = match.group(0)!;
+        String titleStr = cleanLine.replaceFirst(dateStr, '').trim();
+        // Remove trailing separators
+        titleStr = titleStr.replaceAll(RegExp(r'[|]\s*$'), '').trim();
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: Text(titleStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15))),
+              Text(dateStr, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+            ],
           ),
+        );
+      }
+
+      // Bullets or subheaders
+      bool isBullet = cleanLine.startsWith('•') || cleanLine.startsWith('*') || cleanLine.startsWith('-');
+      return Padding(
+        padding: EdgeInsets.only(left: isBullet ? 12 : 0, bottom: 4),
+        child: Text(
+          cleanLine,
+          style: TextStyle(
+            color: cleanLine.contains("Learned & Achieved") ? Colors.white : Colors.white70,
+            fontSize: 14,
+            height: 1.4,
+            fontWeight: cleanLine.contains("Learned & Achieved") ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildCandidateOverview() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Candidate Overview', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 24),
+          _buildInfoRow(Icons.person, "Name:", _extractedName),
+          const SizedBox(height: 12),
+          _buildInfoRow(Icons.category, "Role:", _category),
+          const SizedBox(height: 32),
+          const Text('Technical Skills', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 10,
+            children: _skills.map((s) => _buildSkillTag(s)).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: Colors.white54, size: 18),
+        const SizedBox(width: 12),
+        Text(label, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+        const SizedBox(width: 8),
+        Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14))),
+      ],
+    );
+  }
+
+  Widget _buildSkillTag(String skill) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFF3B82F6),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Text(skill.toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11, letterSpacing: 0.5)),
+    );
+  }
+
+  Widget _buildUploadCard() {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Upload Resume', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          const SizedBox(height: 20),
+          _isUploading
+              ? LinearProgressIndicator(value: _uploadProgress, color: Colors.blueAccent)
+              : _isAnalyzed
+                  ? Row(
+                      children: [
+                        const Icon(Icons.check_circle, color: Colors.greenAccent),
+                        const SizedBox(width: 12),
+                        const Expanded(child: Text("Successfully Analyzed!", style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold))),
+                        TextButton(onPressed: () => setState(() => _isAnalyzed = false), child: const Text("Reset", style: TextStyle(color: Colors.white54))),
+                      ],
+                    )
+                  : ElevatedButton(
+                      onPressed: _pickAndUploadResume,
+                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), minimumSize: const Size(double.infinity, 50)),
+                      child: const Text("Select File", style: TextStyle(color: Colors.white)),
+                    ),
         ],
       ),
     );
@@ -567,99 +348,9 @@ class _ResumeScreenState extends State<ResumeScreen> {
 
   Widget _buildEmptyResultsPlaceholder() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 20),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.analytics_outlined, size: 64, color: Colors.grey.shade300),
-          const SizedBox(height: 20),
-          const Text(
-            'No Analysis Yet',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Upload your resume to see AI-powered insights and skill analysis',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.grey),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileInsights() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9).withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.auto_awesome, color: Color(0xFF3B26F2), size: 20),
-              SizedBox(width: 12),
-              Text(
-                'AI Result',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Name: $_extractedName',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF3B26F2),
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Category: $_category',
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text('Skills:', style: TextStyle(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(_skills.join(", "), style: const TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBannerStat(String value, String label) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white70, fontSize: 14),
-        ),
-      ],
+      height: 200,
+      decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(16)),
+      child: const Center(child: Text("Upload a resume to see analysis", style: TextStyle(color: Colors.white24))),
     );
   }
 }

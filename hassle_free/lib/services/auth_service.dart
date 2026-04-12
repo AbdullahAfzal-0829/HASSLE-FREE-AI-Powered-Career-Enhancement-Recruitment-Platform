@@ -72,12 +72,19 @@ class AuthService {
     }
   }
 
-  Future<GoogleSignInAccount?> signInWithGoogle() async {
+  Future<UserCredential?> signInWithGoogle() async {
     try {
       // Using authenticate() as it is the recognized method in this environment
       final account = await _googleSignIn.authenticate();
       _currentUser = account;
-      return account;
+      
+      final authentication = account.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: (authentication as dynamic).accessToken,
+        idToken: (authentication as dynamic).idToken,
+      );
+      
+      return await _firebaseAuth.signInWithCredential(credential);
     } catch (e) {
       debugPrint('Error during Google Sign-In: $e');
       rethrow;

@@ -53,7 +53,10 @@ def upload_resume():
             "filename": filename,
             "name": analysis_result.get("name", "User"),
             "category": analysis_result.get("category", "Unknown"),
-            "detected_skills": analysis_result.get("skills", []),
+            "skills": analysis_result.get("skills", []),
+            "experience": analysis_result.get("experience", "Not found"),
+            "education": analysis_result.get("education", "Not found"),
+            "text_preview": analysis_result.get("text_preview", ""),
             "progress": 100 
         }
         

@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'resume_screen.dart';
-import 'interview_screen.dart';
 import 'employer_dashboard_screen.dart';
 import 'jobs_screen.dart';
 import 'profile_screen.dart';
+import 'interview_screen.dart';
+import '../services/resume_service.dart';
 
 class MainDashboardScreen extends StatefulWidget {
   const MainDashboardScreen({super.key});
@@ -12,10 +14,47 @@ class MainDashboardScreen extends StatefulWidget {
   State<MainDashboardScreen> createState() => _MainDashboardScreenState();
 }
 
-class _MainDashboardScreenState extends State<MainDashboardScreen> {
+class _MainDashboardScreenState extends State<MainDashboardScreen>
+    with SingleTickerProviderStateMixin {
   int _selectedIndex = 0;
   bool _isJobSeeker = true;
-  String _userName = "Sarah"; // Default name
+  String _userName = ""; // Removed "Sarah" as default
+  late AnimationController _bgAnimationController;
+  StreamSubscription? _resumeSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _bgAnimationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 10),
+    )..repeat(reverse: true);
+    _subscribeToUserData();
+  }
+
+  void _subscribeToUserData() {
+    _resumeSubscription = ResumeService().getLatestResumeAnalysisStream().listen(
+      (data) {
+        if (data != null && data['name'] != null) {
+          if (mounted) {
+            setState(() {
+              _userName = data['name'];
+            });
+          }
+        }
+      },
+      onError: (error) {
+        debugPrint('Error in Dashboard stream: $error');
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _bgAnimationController.dispose();
+    _resumeSubscription?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,12 +71,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
   Widget _buildWebLayout(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF0F172A), // Dark Slate
       body: Row(
         children: [
           Container(
             width: 260,
-            color: Colors.white,
+            color: const Color(0xFF0F172A),
             padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -67,11 +106,12 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 18,
+                            color: Colors.white,
                           ),
                         ),
                         Text(
                           'AI Recruitment',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                          style: TextStyle(color: Colors.white60, fontSize: 12),
                         ),
                       ],
                     ),
@@ -81,30 +121,36 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 _buildSidebarItem(0, Icons.dashboard_rounded, 'Dashboard'),
                 _buildSidebarItem(1, Icons.business_center_outlined, 'Jobs'),
                 _buildSidebarItem(2, Icons.description_outlined, 'Resume'),
-                _buildSidebarItem(3, Icons.videocam_outlined, 'Interview'),
+                _buildSidebarItem(3, Icons.video_call_outlined, 'Interview'),
                 _buildSidebarItem(4, Icons.person_outline, 'Profile'),
                 const Spacer(),
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: Colors.white.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
                         'Upgrade to Pro',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
                       ),
                       const Text(
                         'Get unlimited AI features',
-                        style: TextStyle(fontSize: 12, color: Colors.grey),
+                        style: TextStyle(fontSize: 12, color: Colors.white70),
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3B26F2),
+                          backgroundColor: const Color(0xFF6366F1),
                           minimumSize: const Size(double.infinity, 40),
                         ),
                         onPressed: () {},
@@ -121,7 +167,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           ),
           Expanded(
             child: Container(
-              color: const Color(0xFFF8FAFC),
+              color: const Color(0xFF020617), // Deep Dark Body
               child: _buildSelectedScreen(),
             ),
           ),
@@ -131,7 +177,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   }
 
   Widget _buildSelectedScreen() {
-    bool isMobile = MediaQuery.of(context).size.width < 1100;
     switch (_selectedIndex) {
       case 1:
         return const JobsScreen();
@@ -163,15 +208,19 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         if (!_isJobSeeker) {
           return const EmployerDashboardScreen();
         }
-        return isMobile
-            ? _buildMobileDashboardContent()
-            : SingleChildScrollView(child: _buildDashboardContent());
+        return Stack(
+          children: [
+            _buildLiveBackground(),
+            SingleChildScrollView(child: _buildDashboardContent()),
+          ],
+        );
     }
   }
 
   Widget _buildDashboardContent() {
+    bool isMobile = MediaQuery.of(context).size.width < 1100;
     return Padding(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.all(isMobile ? 16 : 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -179,10 +228,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   children: [
@@ -201,14 +250,17 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               ),
               Row(
                 children: [
-                  const CircleAvatar(
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.notifications_none, color: Colors.black),
+                  CircleAvatar(
+                    backgroundColor: Colors.white.withValues(alpha: 0.1),
+                    child: const Icon(
+                      Icons.notifications_none,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   CircleAvatar(
                     backgroundImage: NetworkImage(
-                      'https://api.dicebear.com/7.x/avataaars/png?seed=$_userName',
+                      'https://api.dicebear.com/7.x/avataaars/png?seed=${_userName.isEmpty ? "default" : _userName}',
                     ),
                   ),
                 ],
@@ -218,7 +270,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
           const SizedBox(height: 32),
           Container(
             width: double.infinity,
-            height: 300,
+            height: isMobile ? 240 : 300,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
               gradient: const LinearGradient(
@@ -232,8 +284,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             child: Stack(
               children: [
                 Positioned(
-                  left: 40,
-                  top: 40,
+                  left: isMobile ? 24 : 40,
+                  top: isMobile ? 24 : 40,
+                  right: isMobile ? 24 : 300,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -247,6 +300,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Icon(
                               Icons.auto_awesome,
@@ -267,23 +321,66 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Welcome back, $_userName! 👋',
-                        style: const TextStyle(
+                        _userName.isNotEmpty
+                            ? 'Welcome back, $_userName! 👋'
+                            : 'Welcome back! 👋',
+                        style: TextStyle(
                           color: Colors.white,
-                          fontSize: 36,
+                          fontSize: isMobile ? 28 : 42,
                           fontWeight: FontWeight.bold,
+                          letterSpacing: -0.5,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      const Text(
-                        'You have 12 new job matches and 3 interview invitations\nwaiting for you',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: 60,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                       const SizedBox(height: 24),
+                    ],
+                  ),
+                ),
+                Positioned(
+                  top: -40,
+                  right: -40,
+                  child: Container(
+                    width: 200,
+                    height: 200,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: -30,
+                  left: 150,
+                  child: Container(
+                    width: 120,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Colors.white.withValues(alpha: 0.08),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: isMobile ? 12 : 16,
+                  left: isMobile ? 24 : 40,
+                  right: isMobile ? 24 : 40,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _buildBannerStat('24', 'Applications'),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
+                          backgroundColor: const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
@@ -291,8 +388,13 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                             horizontal: 20,
                             vertical: 16,
                           ),
+                          elevation: 0,
                         ),
-                        onPressed: () {},
+                        onPressed: () {
+                          setState(() {
+                            _selectedIndex = 1;
+                          });
+                        },
                         icon: const Icon(
                           Icons.business_center_outlined,
                           size: 18,
@@ -305,67 +407,65 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                     ],
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 40,
-                  right: 40,
-                  child: SizedBox(
-                    height: 100,
-                    child: Row(
-                      children: [
-                        _buildBannerStat('24', 'Applications'),
-                        _buildBannerStat('87%', 'Match Score'),
-                        _buildBannerStat('156', 'Profile Views'),
-                      ],
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 40,
-                  top: 40,
-                  bottom: 60,
-                  child: Container(
-                    width: 240,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 2,
-                      ),
-                      image: const DecorationImage(
-                        image: NetworkImage(
-                          'https://images.pexels.com/photos/712513/pexels-photo-712513.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=1',
-                        ),
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: const BoxDecoration(
-                          color: Colors.black38,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
-                          size: 40,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
           ),
           const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recommended Jobs',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              TextButton(
+                onPressed: () => setState(() => _selectedIndex = 1),
+                child: const Text(
+                  'See all',
+                  style: TextStyle(color: Color(0xFF6366F1)),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 100,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildCompactJobCard(
+                  'Senior UI Designer',
+                  'Creative Inc',
+                  'Remote',
+                ),
+                const SizedBox(width: 16),
+                _buildCompactJobCard('Full Stack Dev', 'TechFlow', 'USA'),
+                const SizedBox(width: 16),
+                _buildCompactJobCard('Product Lead', 'Innova', 'London'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Text(
+            'Your Activity',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
           GridView.count(
-            crossAxisCount: 4,
+            crossAxisCount: isMobile ? 1 : 2,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 20,
             mainAxisSpacing: 20,
-            childAspectRatio: 1.5,
+            childAspectRatio: isMobile ? 2.8 : 2.5,
             children: [
               _buildStatCard(
                 'Applications',
@@ -373,20 +473,6 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 Icons.business_center,
                 const Color(0xFF3B82F6),
                 '+12% this week',
-              ),
-              _buildStatCard(
-                'Interviews',
-                '3',
-                Icons.gps_fixed,
-                const Color(0xFFA855F7),
-                '2 this week',
-              ),
-              _buildStatCard(
-                'Profile Views',
-                '156',
-                Icons.star_border,
-                const Color(0xFF06B6D4),
-                '+28% this week',
               ),
               _buildStatCard(
                 'Offers',
@@ -404,14 +490,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
 
   Widget _buildMobileLayout(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF020617),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: const Text(
           'HASSLE-FREE',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontWeight: FontWeight.bold,
             fontSize: 18,
           ),
@@ -419,7 +505,7 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
         actions: [
           IconButton(
             onPressed: () {},
-            icon: const Icon(Icons.menu, color: Colors.black),
+            icon: const Icon(Icons.menu, color: Colors.white),
           ),
         ],
       ),
@@ -430,8 +516,9 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             _selectedIndex = _reverseIndexMap(index);
           });
         },
+        backgroundColor: const Color(0xFF0F172A),
         type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF3B26F2),
+        selectedItemColor: const Color(0xFF6366F1),
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
@@ -445,14 +532,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
             label: 'Resume',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.videocam_outlined),
-            activeIcon: Icon(Icons.videocam),
-            label: 'Interview',
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.business_center_outlined),
             activeIcon: Icon(Icons.business_center),
             label: 'Jobs',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.video_call_outlined),
+            activeIcon: Icon(Icons.video_call),
+            label: 'Interview',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
@@ -469,8 +556,8 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   int _selectedIndexMap(int index) {
     if (index == 0) return 0; // Dashboard
     if (index == 2) return 1; // Resume
-    if (index == 3) return 2; // Interview
-    if (index == 1) return 3; // Jobs
+    if (index == 1) return 2; // Jobs
+    if (index == 3) return 3; // Interview
     if (index == 4) return 4; // Profile
     return 0;
   }
@@ -479,184 +566,10 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
   int _reverseIndexMap(int mobileIndex) {
     if (mobileIndex == 0) return 0; // Dashboard
     if (mobileIndex == 1) return 2; // Resume
-    if (mobileIndex == 2) return 3; // Interview
-    if (mobileIndex == 3) return 1; // Jobs
+    if (mobileIndex == 2) return 1; // Jobs
+    if (mobileIndex == 3) return 3; // Interview
     if (mobileIndex == 4) return 4; // Profile
     return 0;
-  }
-
-  Widget _buildMobileDashboardContent() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Welcome back, $_userName!',
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Here's what's happening with your job search",
-            style: TextStyle(color: Colors.grey, fontSize: 16),
-          ),
-          const SizedBox(height: 24),
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF3B26F2), Color(0xFF9042F6)],
-              ),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Profile Completion',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white24,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      '75% Complete',
-                      style: TextStyle(color: Colors.white, fontSize: 16),
-                    ),
-                    Text(
-                      '3/4 sections',
-                      style: TextStyle(color: Colors.white70, fontSize: 16),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: const LinearProgressIndicator(
-                    value: 0.75,
-                    backgroundColor: Colors.white24,
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    minHeight: 8,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'Complete your profile to increase your chances of getting hired!',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: const Color(0xFF3B26F2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    minimumSize: const Size(double.infinity, 50),
-                  ),
-                  child: const Text(
-                    'Complete Profile',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMobileStatCard(
-                  'Employability Score',
-                  '8.5/10',
-                  Icons.star_border,
-                  Colors.green,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildMobileStatCard(
-                  'Applications',
-                  '12',
-                  Icons.business_center_outlined,
-                  Colors.blue,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMobileStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  title,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: color, size: 16),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
   }
 
   Widget _buildSidebarItem(int index, IconData icon, String title) {
@@ -701,14 +614,16 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
+          color: isActive
+              ? Colors.white.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-            color: isActive ? Colors.black : Colors.grey,
+            color: isActive ? Colors.white : Colors.white60,
           ),
         ),
       ),
@@ -746,13 +661,11 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
     String subtitle,
   ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10),
-        ],
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -765,13 +678,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    style: const TextStyle(color: Colors.white60, fontSize: 12),
                   ),
                   Text(
                     value,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -779,14 +693,14 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
             ],
           ),
-          const Spacer(),
+          const SizedBox(height: 8),
           Text(
             subtitle,
             style: TextStyle(
@@ -794,6 +708,92 @@ class _MainDashboardScreenState extends State<MainDashboardScreen> {
               fontSize: 10,
               fontWeight: FontWeight.bold,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLiveBackground() {
+    return Positioned.fill(
+      child: AnimatedBuilder(
+        animation: _bgAnimationController,
+        builder: (context, child) {
+          return Stack(
+            children: [
+              Positioned(
+                top: 100 + (20 * _bgAnimationController.value),
+                left: -50 + (30 * _bgAnimationController.value),
+                child: Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 80 - (30 * _bgAnimationController.value),
+                right: -100 + (50 * _bgAnimationController.value),
+                child: Container(
+                  width: 400,
+                  height: 400,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCompactJobCard(String title, String company, String location) {
+    return Container(
+      width: 200,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+              color: Colors.white,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            company,
+            style: const TextStyle(color: Colors.white60, fontSize: 12),
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              const Icon(
+                Icons.location_on_outlined,
+                size: 12,
+                color: Colors.white60,
+              ),
+              const SizedBox(width: 4),
+              Text(
+                location,
+                style: const TextStyle(color: Colors.white60, fontSize: 10),
+              ),
+            ],
           ),
         ],
       ),
