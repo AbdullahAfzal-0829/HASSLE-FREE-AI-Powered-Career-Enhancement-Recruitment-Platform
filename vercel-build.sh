@@ -19,6 +19,9 @@ cd hassle_free
 flutter pub get
 flutter build web --release --base-href /
 
-# 5. Move the output to the root so Vercel can find it if needed
-# (Only if you set the output directory to 'hassle_free/build/web' in Vercel)
+# 5. Move the output to the public directory so Vercel can find it
+echo "Moving output to public folder..."
+cd ..
+mkdir -p public
+cp -R hassle_free/build/web/* public/
 echo "Build complete."
